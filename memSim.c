@@ -17,7 +17,7 @@ int tlb_index = 0;
 int search_tlb(int page_number){
 	int i;
 	for(i = 0; i < TLB_SIZE; i++){
-		if(tlb_page[i] = page_number)
+		if(tlb_page[i] == page_number)
 			return tlb_frame[i];
 	}
 	return -1;
@@ -37,6 +37,13 @@ int handle_page_fault(int page_number, FILE *backing_store){
 
 	if(fseek(backing_store, page_number * PAGE_SIZE, SEEK_SET) != 0){
 		fprintf(stderr, "Error seeking in backing store.\n");
+		exit(1);
+	}
+	
+	physical_memory = malloc(num_frames * PAGE_SIZE * sizeof(signed char));
+
+	if(physical_memory == NULL){
+		fprintf(stderr, "Error allocating physical memory.\n");
 		exit(1);
 	}
 
@@ -75,7 +82,7 @@ int main(int argc, char *argv[]){
 		tlb_frame[k] = -1;
 	}
 	
-	FILE *backing_store = fopen("Backing_STORE.bin", "rb");
+	FILE *backing_store = fopen("BACKING_STORE.bin", "rb");
 
 	if(!backing_store){
 		perror("Error opening BACKING_STORE.bin");
@@ -89,7 +96,7 @@ int main(int argc, char *argv[]){
 	}
 
 	int logical_address;
-	int tlb_his = 0, pages_faults = 0, total_addresses = 0;
+	int tlb_hits = 0, page_faults = 0, total_addresses = 0;
 
 	while(fscanf(addr_file, "%d", &logical_address) == 1){
 		total_addresses++;
@@ -130,30 +137,4 @@ int main(int argc, char *argv[]){
 	free(physical_memory);	
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
