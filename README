@@ -1,0 +1,99 @@
+Paulo Aguirre
+Abdullah Tanveer
+
+Project 3: Memory Simulator
+
+Write-Up
+
+I. Overview
+
+memSim is modeled with the following assignment specifications:
+* 2^8 entires in the page table
+* 16 entries in the TLB
+* Page size = Frame Size = 256 bytes
+* Variable number of frames
+* Support for multiple page replacement algorithms
+* Physical memory of size 256*FRAMES
+
+Models a simple paged virtual memory system with a configurable number of physical frames, a small FIFO TLB, a page table with valid and last_used fields, a backing-store file for demand paging, and three page-replacement policies (FIFO, LRU, and OPT) supported for handling page faults. It collects  standard statistics (page faults, TLB hits, TLB misses) while translating a list of logical addresses.
+
+II. Objects
+
+Page Table
+* Type: PageTableEntry page_table[NUM_PAGES]
+* Fields:
+    * frame: physical frame the page currently occupies
+    * valid: the page is loaded in memory
+    * last_used: timestamps for LRU replacement
+* Purpose: Maps virtual pages to physical frames
+
+TLB (Translation Lookaside Buffer)
+* Type: Parallel arrays
+* Additional state:
+    * int tlb_index -> circular pointer for FIFO replacement
+* Purpose: a small cache that stores recent page -> frame mappings to speed up translation
+
+Physical Memory
+* Type: signed char *physical_memory
+* Size: num_frames * PAGE_SIZE bytes
+* Purpose: Simulated main memory, where pages are loaded from the BACKING_STORE
+
+Backing Store
+* Type: FILE *backing_store
+* Source: “BACKING_STORE.bin”
+* Purpose: Represents secondary storage containing all pages. When a page fault occurs, the missing page is read from here
+
+Frame-to-Page Mapping
+* Type: int *frame_to_page
+* Purpose: Reverse lookup table to determine which virtual page currently occupies a physical frame
+* Used by replacement algorithms to evict the correct page
+
+Reference Sequence
+* Type: int *ref_seq
+* Purpose: Stores all logical addresses from the input file
+* Used by the Optimal (OPT) replacement algorithm to predict future references
+
+Statistics Counters
+* Variables:
+    * int total_addresses, page_faults, tlb_hits, tlb_misses
+* Purpose: Used to calculate performance metrics such as:
+    * Page fault rate 
+    * TLB hit rate
+
+III. Functional Units
+* main()
+    * Initializes data structures 
+    * Reads command-line arguments for frame count and algorithm
+    * Loads the reference sequence from file
+    * Iterates through each logical address, performing translation and printing results
+* search_tlb(int page_number)
+    * Scans the TLB for the given page_number
+    * Returns the corresponding frame if found, otherwise -1
+    * Models TLB lookup in hardware
+* addTotlb( int page_number, int frame_number)
+    * Inserts a new mapping into the TLB using FIFO replacement
+    * Simulates the limited size of a real TLB and eviction of older entries
+* Handle_page_fault(…)
+    * Handles what happens when a page is not in memory
+		1. Chooses a frame
+		2. Reads the page from the backing store into that frame
+		3. Updates the page table and frame-to-page mapping
+    * Increments page_faults
+    * Represents the OS’s page fault handler
+* Page Replacement Algorithms 
+    * fifo_replacement()
+        * Implements First-In, First-Out replacement
+        * Uses a circular index to evict the oldest frame
+    * lru_replacement()
+        * Implements Least Recently Used replacement
+        * Finds the valid page with the smallest last_used timestamp
+    * opt_replacement(ref_seq, ref_count, current_index)
+        * Implements Optimal replacement
+        * Looks ahead in the reference sequence to find which page will not be used for the longest time
+* replace_page()
+    * Helper conceptually used by replacement algorithms
+    * Invalidates old page and replaces it with the new one
+* print_frame(int frame_number)
+    * Prints all 256 bytes of a frame in hexadecimal 
+    * Debugging visualization of memory content
+
