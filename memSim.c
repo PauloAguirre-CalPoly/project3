@@ -50,7 +50,7 @@ void print_frame(int frame_number){
 	for(i = 0; i <PAGE_SIZE; i++){
 		printf("%02X", frame_ptr[i]);
 	}
-	printf("\n");
+//	printf("\n");
 }
 
 int search_tlb(int page_number){
@@ -141,16 +141,22 @@ int opt_replacement(int *ref_seq, int ref_count, int current_index){
 		if(!page_table[p].valid){
 			continue;
 		}
+
+
 	
 		int found_future = 0;
 		int i;
 		for(i = current_index + 1; i < ref_count; i++){
-			if(ref_seq[i] == p){
-				found_future = 1;
+			
+			int page_i = (ref_seq[i] >> 8) & 0xFF;
+				//if(ref_seq[i] == p){
+			if(page_i == p){		
+			found_future = 1;
 				if(i > farthest_use){
 					farthest_use = i;
 					page_to_replace = p;
 				}
+			break;
 			}
 		}
 		if(!found_future){
@@ -175,7 +181,8 @@ int main(int argc, char *argv[]){
 	} 
 
 	if(argc >= 4){
-		strncpy(replacement_alg, argv[3], sizeof(replacement_alg));
+		strncpy(replacement_alg, argv[3], sizeof(replacement_alg)-1);
+		replacement_alg[sizeof(replacement_alg) - 1] = '\0';
 	}
 
 	if(num_frames <= 0 || num_frames > NUM_PAGES){
@@ -219,6 +226,11 @@ int main(int argc, char *argv[]){
 
 	int cap = 1000;
 	int *ref_seq = malloc(cap * sizeof(int));
+	if(ref_seq == NULL){
+		fprintf(stderr, "Error allocating reference sequence.\n");
+		exit(1);
+	}
+
 	int addr;
 	int ref_count = 0;
 
@@ -226,7 +238,10 @@ int main(int argc, char *argv[]){
 		if(ref_count >= cap){
 			cap *= 2;
 			ref_seq = realloc(ref_seq, cap * sizeof(int));
-		}
+			if(ref_seq == NULL){
+				fprintf(stderr, "Error reallocating reference sequence.\n");
+				exit(1);		
+}}
 
 		ref_seq[ref_count++] = addr;
 	}
@@ -236,7 +251,7 @@ int main(int argc, char *argv[]){
 	fifo_index = 0;
 
 	int logical_address;
-	int loopCount = 0;
+	//int loopCount = 0;
 	while(fscanf(addr_file, "%d", &logical_address) == 1){
 		total_addresses++;
 		int page_number = (logical_address >> 8) & 0xFF;
@@ -260,16 +275,19 @@ int main(int argc, char *argv[]){
 		page_table[page_number].last_used = total_addresses;
 		signed char value = physical_memory[frame_number * PAGE_SIZE + offset];
 
-		printf("%d, %d, %d,\n", logical_address, value, frame_number);
+//		printf("%d, %d, %d,\n", logical_address, value, frame_number);
+		printf("%d, %d, %d, ", logical_address, (int)value, frame_number);
 		print_frame(frame_number);
-		loopCount++;
+	//	loopCount++;
+		printf("\n");
 	}
-	printf("Number of Translated Addresses =  %d\n", total_addresses);
+//	printf("\n");
+	printf("Number of Translated Addresses = %d\n", total_addresses);
 	printf("Page Faults = %d\n", page_faults);
 	printf("Page Fault Rate = %.3f\n", (page_faults / (float)total_addresses));
 	printf("TLB Hits = %d\n", tlb_hits);
-	printf("TLB Misses =  %d\n", tlb_misses);
-	printf("TLB Hit Rate =  %.3f\n",(tlb_hits / (float)total_addresses) * 100);
+	printf("TLB Misses = %d\n", tlb_misses);
+	printf("TLB Hit Rate = %.3f\n",(tlb_hits / (float)total_addresses) * 100);
 
 	fclose(backing_store);
 	fclose(addr_file);
